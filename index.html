@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phần Mềm Bốc Thăm Tự Động (Offline)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Thư viện jsPDF và jsPDF-AutoTable để xuất PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .scroll-container { max-height: 400px; overflow-y: auto; }
+        /* Tùy chỉnh thanh cuộn cho đẹp */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex items-center justify-between mb-6 border-b-2 pb-4 border-indigo-200">
+            <div class="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 mr-4">
+                <!-- Logo placeholder -->
+                <img src="https://static.k12online.vn/upload/2002925/20210824/logo_so_4fb73.png" class="w-full h-full object-contain rounded-lg p-1 border border-gray-200" onerror="this.onerror=null; this.src='https://placehold.co/96x96/f0f4f8/1f2937?text=LOGO';">
+            </div>
+            <div class="flex-grow text-center">
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-indigo-700">HỆ THỐNG BỐC THĂM</h1>
+                <p class="text-sm text-gray-500 mt-1">Sở Giáo dục và Đào tạo tỉnh Lâm Đồng</p>
+            </div>
+            <!-- Empty div for centering -->
+            <div class="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 ml-4 opacity-0"></div>
+        </header>
+
+        <!-- Custom Message Box for alerts (instead of alert() or confirm()) -->
+        <div id="message-box"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- KHỐI CẤU HÌNH & THỰC HIỆN -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                
+                <!-- KHU VỰC NÚT THỰC HIỆN VÀ RESET (Không đánh số) -->
+                <div class="border-b pb-4 mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
+                    <div class="flex space-x-4">
+                        <button onclick="handleDraw()" id="draw-button" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-200">
+                            THỰC HIỆN BỐC THĂM NGẪU NHIÊN
+                        </button>
+                        <!-- Nút Reset (Màu xanh indigo) -->
+                        <button onclick="resetDraw()" class="w-1/4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-200 text-sm">
+                            Làm lại (Reset)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1. KHU VỰC TIÊU ĐỀ BỐC THĂM -->
+                <div class="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <h3 class="text-lg font-bold text-yellow-800 mb-2">1. Tiêu đề Bốc thăm</h3>
+                    <input type="text" id="draw-title" placeholder="Ví dụ: Đơn Nam Vòng Loại" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+                
+                <!-- 2. KHU VỰC KHAI BÁO NHÁNH THI ĐẤU -->
+                <div class="mb-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <h3 class="text-lg font-bold text-indigo-800 mb-2">2. Khai báo Nhánh Thi Đấu (Pools)</h3>
+                    <div class="grid grid-cols-3 gap-3 text-sm font-semibold mb-2">
+                        <label>Nhánh (ID/Tên)</label>
+                        <label>Số thăm Bắt đầu</label>
+                        <label>Số thăm Kết thúc</label>
+                    </div>
+                    <div id="pool-inputs" class="space-y-2">
+                        <div class="grid grid-cols-3 gap-3">
+                            <input type="text" value="A" class="pool-id p-2 border rounded shadow-sm">
+                            <input type="number" value="1" class="pool-start p-2 border rounded shadow-sm">
+                            <input type="number" value="8" class="pool-end p-2 border rounded shadow-sm">
+                        </div>
+                    </div>
+                    <button onclick="addPoolInput()" class="mt-3 text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+                        + Thêm Nhánh
+                    </button>
+                </div>
+                
+                <!-- 3. KHU VỰC DANH SÁCH VĐV -->
+                <div class="mb-0 border-t pt-4">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">3. Danh sách VĐV & Đơn vị</h3>
+                    <p class="text-sm text-gray-600 mb-2">
+                        Nhập/dán dữ liệu có sẵn theo cấu hình (Cột: Tên VĐV, Đơn vị) hoặc tải từ file.
+                    </p>
+                    
+                    <div class="mb-3 flex items-center space-x-3">
+                        <label for="vdv-file-input" class="cursor-pointer bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-sm font-medium py-2 px-4 rounded-lg shadow-sm transition duration-150 border border-indigo-300">
+                            Tải File Danh Sách (.txt / .csv)
+                        </label>
+                        <input type="file" id="vdv-file-input" accept=".csv, .txt" class="hidden" onchange="handleFileUpload(event)">
+                        
+                        <!-- Nút Tải File Mẫu (Màu xanh mint) -->
+                        <button onclick="downloadSampleFile()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-sm font-medium py-2 px-4 rounded-lg shadow-sm transition duration-150 border border-emerald-300">
+                            Tải File Mẫu (.csv)
+                        </button>
+                        
+                        <span id="file-name-display" class="text-sm text-gray-500 italic">Chưa có file nào được chọn.</span>
+                    </div>
+
+                    <textarea id="vdv-data-input" rows="10" class="w-full p-3 border border-gray-300 rounded-lg text-sm font-mono focus:ring-indigo-500 focus:border-indigo-500" placeholder="Nguyễn Văn A	Hà Nội"></textarea>
+                    <p id="vdv-count-display" class="text-xs mt-2 text-indigo-700 font-medium">0 VĐV đã được nhận diện.</p>
+                </div>
+            </div>
+
+            <!-- KHU VỰC KẾT QUẢ VÀ LỊCH SỬ -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-green-50 p-6 rounded-xl shadow-lg border border-green-200">
+                    <h2 class="text-xl font-semibold text-green-800 mb-4 border-b pb-2">4. Kết quả Mới nhất</h2>
+                    <div id="latest-results" class="scroll-container text-sm bg-white rounded border p-2 h-64">
+                        <p class="text-gray-500 italic p-2">Chưa có kết quả.</p>
+                    </div>
+                    <div id="export-buttons" class="mt-4 flex space-x-2 hidden">
+                        <button onclick="exportToExcel(window.LATEST_RESULTS, window.LATEST_TITLE)" class="flex-1 bg-green-500 text-white py-2 rounded shadow hover:bg-green-600 text-sm">Xuất Excel</button>
+                        <button onclick="exportToPDF(window.LATEST_RESULTS, window.LATEST_TITLE)" class="flex-1 bg-red-600 text-white py-2 rounded shadow hover:bg-red-700 text-sm">Xuất PDF</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h2 class="text-xl font-semibold text-gray-800">5. Lịch sử</h2>
+                        <button onclick="clearHistory()" class="text-xs text-red-500 hover:underline">Xóa lịch sử</button>
+                    </div>
+                    <div id="draw-history-list" class="divide-y divide-gray-200 border rounded-lg max-h-64 overflow-y-auto">
+                        <p class="text-gray-500 italic p-3 text-sm">Đang tải...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- FOOTER MỚI: Dùng để hiển thị bản quyền -->
+    <footer id="app-footer" class="max-w-6xl mx-auto mt-8 pt-4 pb-4 border-t border-indigo-200 text-center text-xs text-gray-500">
+        <!-- Nội dung sẽ được chèn bởi JavaScript -->
+    </footer>
+
+    <script>
+        // --- CONSTANT BẢN QUYỀN ---
+        const COPYRIGHT_TEXT = "© 2025 Phần Mềm Bốc Thăm - Phát triển bởi Giáo viên: Trần Quang Hào, Trường THPT Phan Bội Châu - Phan Thiết";
+        
+        // --- 1. KHỞI TẠO & QUẢN LÝ DỮ LIỆU (LOCAL STORAGE) ---
+        
+        const STORAGE_KEY = 'boctham_offline_history';
+        let VDV_COUNT = 0; // Biến này không thay đổi vì dùng trong code
+        window.LATEST_RESULTS = [];
+        window.LATEST_TITLE = "";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup mẫu dữ liệu mặc định ban đầu
+            const vdvInput = document.getElementById('vdv-data-input');
+            vdvInput.value = "Nguyễn Văn A	Hà Nội\nLê Thị B	HCM\nTrần Đình C	Hà Nội\nPhạm Văn D	Đà Nẵng\nHoàng Thị E	HCM\nĐỗ Minh F	Hải Phòng\nChu Đình G	Đà Nẵng\nNguyễn Thị H	Cần Thơ";
+            
+            vdvInput.addEventListener('input', updateVDVCount);
+            updateVDVCount();
+            loadHistory();
+            
+            // THÊM: Đóng dấu bản quyền vào footer ứng dụng
+            const footerEl = document.getElementById('app-footer');
+            if (footerEl) {
+                footerEl.textContent = COPYRIGHT_TEXT;
+            }
+        });
+
+        /**
+         * Cập nhật số lượng VĐV từ textarea
+         */
+        function updateVDVCount() {
+            const lines = document.getElementById('vdv-data-input').value.trim().split('\n').filter(l => l.trim());
+            
+            // Tách riêng dòng tiêu đề nếu có
+            const dataLines = [...lines]; // Copy mảng
+            if (dataLines.length > 0) {
+                const firstLine = dataLines[0].trim().toLowerCase();
+                if (firstLine.includes('tên') && firstLine.includes('đơn vị')) {
+                    dataLines.shift(); // Loại bỏ dòng tiêu đề để đếm VĐV
+                }
+            }
+            
+            VDV_COUNT = dataLines.length;
+            // Cập nhật hiển thị: VĐV
+            document.getElementById('vdv-count-display').textContent = `${VDV_COUNT} VĐV đã được nhận diện.`;
+        }
+
+        /**
+         * Xử lý tải file danh sách VĐV (.txt hoặc .csv)
+         */
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            const vdvInput = document.getElementById('vdv-data-input');
+            const fileNameDisplay = document.getElementById('file-name-display');
+            const msgBox = document.getElementById('message-box');
+            
+            msgBox.innerHTML = ''; // Xóa thông báo cũ
+
+            if (!file) {
+                fileNameDisplay.textContent = 'Chưa có file nào được chọn.';
+                return;
+            }
+
+            fileNameDisplay.textContent = `Đã tải: ${file.name}`;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    // Đặt nội dung file vào textarea
+                    vdvInput.value = e.target.result.trim();
+                    updateVDVCount(); 
+                    // Cập nhật thông báo: VĐV
+                    msgBox.innerHTML = createAlert(`Đã tải thành công ${VDV_COUNT} VĐV từ file ${file.name}.`, 'success');
+                } catch (error) {
+                    console.error("Lỗi đọc file:", error);
+                    msgBox.innerHTML = createAlert('Lỗi khi đọc file. Vui lòng kiểm tra định dạng file.', 'error');
+                }
+            };
+            
+            reader.onerror = () => {
+                msgBox.innerHTML = createAlert('Không thể đọc file đã chọn.', 'error');
+                fileNameDisplay.textContent = 'Lỗi đọc file.';
+            };
+
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        /**
+         * Lưu lịch sử vào LocalStorage
+         */
+        function saveToHistory(title, data) {
+            try {
+                const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                const newItem = {
+                    id: crypto.randomUUID(),
+                    title: title,
+                    data: data,
+                    timestamp: new Date().toISOString()
+                };
+                history.unshift(newItem); 
+                if (history.length > 50) history.pop();
+                
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+                loadHistory();
+                return true;
+            } catch (e) {
+                console.error("Lỗi lưu storage:", e);
+                // Hiển thị thông báo lỗi cho người dùng
+                document.getElementById('message-box').innerHTML = createAlert('Lỗi khi lưu lịch sử bốc thăm.', 'error');
+                return false;
+            }
+        }
+
+        /**
+         * Tải và hiển thị lịch sử từ LocalStorage
+         */
+        function loadHistory() {
+            const listEl = document.getElementById('draw-history-list');
+            const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            
+            listEl.innerHTML = '';
+            if (history.length === 0) {
+                listEl.innerHTML = '<p class="text-gray-500 italic p-3 text-sm">Chưa có lịch sử bốc thăm.</p>';
+                return;
+            }
+
+            history.forEach(item => {
+                const date = new Date(item.timestamp).toLocaleString('vi-VN');
+                const div = document.createElement('div');
+                div.className = 'border-b last:border-b-0 group';
+                div.innerHTML = `
+                    <div class="p-3 hover:bg-gray-50 cursor-pointer" onclick="toggleDetails('${item.id}')">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-sm text-indigo-700 truncate w-2/3">${item.title}</span>
+                            <span class="text-xs text-gray-400">${date}</span>
+                        </div>
+                    </div>
+                    <div id="details-${item.id}" class="hidden p-2 bg-gray-50 text-xs border-t">
+                        ${renderTableHTML(item.data)}
+                    </div>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        /**
+         * Xóa toàn bộ lịch sử
+         */
+        function clearHistory() {
+            const msgBox = document.getElementById('message-box');
+            // Dùng modal thay thế cho confirm()
+            if(window.confirm("Bạn có chắc muốn xóa toàn bộ lịch sử bốc thăm trên máy này không?")) {
+                localStorage.removeItem(STORAGE_KEY);
+                loadHistory();
+                msgBox.innerHTML = createAlert('Đã xóa toàn bộ lịch sử.', 'success');
+            }
+        }
+
+        function toggleDetails(id) {
+            const el = document.getElementById(`details-${id}`);
+            el.classList.toggle('hidden');
+        }
+
+        /**
+         * Render HTML table từ dữ liệu kết quả bốc thăm
+         */
+        function renderTableHTML(data) {
+            let html = '<table class="w-full text-left table-auto"><thead><tr class="text-gray-500"><th class="px-1">Tên</th><th class="px-1">ĐV</th><th class="px-1 text-center">Số</th><th class="px-1">Bảng</th></tr></thead><tbody>';
+            data.forEach((row, i) => {
+                const bg = i % 2 === 0 ? 'bg-white' : 'bg-indigo-50/50';
+                html += `<tr class="${bg} border-b border-gray-100"><td class="px-1 py-1 font-medium">${row.name}</td><td class="px-1 text-gray-600">${row.unit}</td><td class="px-1 text-center font-bold text-indigo-600">${row.drawNo}</td><td class="px-1">${row.poolID}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            return html;
+        }
+
+        // --- 2. LOGIC BỐC THĂM NÂNG CAO (BACKTRACKING) ---
+
+        /**
+         * Xử lý quá trình bốc thăm (Có thêm hiệu ứng chờ 1.5 giây)
+         */
+        function handleDraw() {
+            const msgBox = document.getElementById('message-box');
+            const drawButton = document.getElementById('draw-button');
+            const resultsEl = document.getElementById('latest-results');
+            
+            msgBox.innerHTML = '';
+            
+            try {
+                // 1. Lấy dữ liệu cấu hình trước để đảm bảo không bị lỗi ngay từ đầu
+                const vdvList = getVDVData(); // Tên biến không thay đổi
+                const pools = getPoolDefinitions();
+                const title = document.getElementById('draw-title').value.trim() || `Kết quả ${new Date().toLocaleTimeString('vi-VN')}`;
+
+                // 2. Trạng thái chờ/loading
+                drawButton.disabled = true;
+                drawButton.innerHTML = 'Đang bốc thăm...';
+                resultsEl.innerHTML = `
+                    <div class="text-center p-8">
+                        <!-- Tailwind Spinner -->
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-3"></div>
+                        <p class="text-red-600 font-semibold">Hệ thống đang thực hiện bốc thăm ngẫu nhiên...</p>
+                        <p class="text-gray-500 text-sm">Vui lòng chờ 1-2 giây để đảm bảo tính ngẫu nhiên.</p>
+                    </div>
+                `;
+                document.getElementById('export-buttons').classList.add('hidden');
+
+
+                // 3. Delay và thực hiện bốc thăm (1500ms = 1.5 giây)
+                setTimeout(() => {
+                    try {
+                        // 4. Thực hiện bốc thăm thực tế
+                        const result = performAdvancedDraw(vdvList, pools);
+
+                        // 5. Hiển thị & Lưu thành công
+                        window.LATEST_RESULTS = result;
+                        window.LATEST_TITLE = title;
+                        
+                        resultsEl.innerHTML = renderTableHTML(result);
+                        document.getElementById('export-buttons').classList.remove('hidden');
+                        
+                        saveToHistory(title, result);
+                        msgBox.innerHTML = createAlert('Bốc thăm thành công!', 'success');
+
+                    } catch (e) {
+                        // Xử lý lỗi trong quá trình bốc thăm
+                        console.error("Lỗi Bốc thăm:", e);
+                        msgBox.innerHTML = createAlert(e.message, 'error');
+                        resultsEl.innerHTML = '<p class="text-gray-500 italic p-2">Lỗi khi bốc thăm.</p>';
+                    } finally {
+                        // 6. Kết thúc loading, bật lại nút
+                        drawButton.disabled = false;
+                        drawButton.innerHTML = 'THỰC HIỆN BỐC THĂM NGẪU NHIÊN';
+                    }
+                }, 1500); // Độ trễ 1.5 giây
+
+            } catch (e) {
+                // Xử lý lỗi cấu hình (ví dụ: thiếu VĐV, sai Pool)
+                console.error("Lỗi Cấu hình:", e);
+                msgBox.innerHTML = createAlert(e.message, 'error');
+                // Vẫn bật lại nút nếu bị lỗi ở bước chuẩn bị
+                drawButton.disabled = false;
+                drawButton.innerHTML = 'THỰC HIỆN BỐC THĂM NGẪU NHIÊN';
+            }
+        }
+
+        /**
+         * Thuật toán Backtracking để xếp lịch
+         * Đảm bảo: Ngẫu nhiên + Không trùng đơn vị trong cùng bảng (nếu có thể)
+         */
+        function performAdvancedDraw(vdvList, pools) { // Tên biến không thay đổi
+            // A. Chuẩn bị Slots
+            const slotToPoolMap = new Map(); // Map: Số thăm -> ID Nhánh
+            const allSlots = [];
+            let totalSlots = 0;
+
+            pools.forEach(p => {
+                for(let i=p.start; i<=p.end; i++) {
+                    allSlots.push(i);
+                    slotToPoolMap.set(i, p.id);
+                    totalSlots++;
+                }
+            });
+
+            // Kiểm tra số lượng
+            // Cập nhật thông báo: VĐV
+            if (totalSlots < vdvList.length) {
+                throw new Error(`Thiếu số thăm! Có ${vdvList.length} VĐV nhưng chỉ có ${totalSlots} số thăm.`);
+            }
+
+            // B. Tách VĐV Cố định và VĐV Tự do (Comment - VĐV)
+            const fixedVDVs = vdvList.filter(v => v.fixedNo > 0); // Tên biến không thay đổi
+            const freeVDVs = vdvList.filter(v => v.fixedNo === 0); // Tên biến không thay đổi
+            
+            // State theo dõi các Đơn vị đã có trong mỗi Nhánh
+            const poolState = {};
+            pools.forEach(p => poolState[p.id] = new Set());
+            const usedSlots = new Set();
+
+            // C. Xử lý VĐV Cố định trước
+            fixedVDVs.forEach(v => {
+                const poolID = slotToPoolMap.get(v.fixedNo);
+                if (!poolID) throw new Error(`Số cố định ${v.fixedNo} của ${v.name} không nằm trong nhánh (Pool) nào.`);
+                
+                // Check trùng đơn vị
+                if (poolState[poolID].has(v.unit)) {
+                    throw new Error(`Xung đột: Đơn vị ${v.unit} đã có người trong nhánh ${poolID} nhưng ${v.name} lại fix cứng vào đây. Vui lòng kiểm tra lại dữ liệu.`);
+                }
+
+                // Gán
+                v.drawNo = v.fixedNo;
+                v.poolID = poolID;
+                poolState[poolID].add(v.unit);
+                usedSlots.add(v.fixedNo);
+            });
+
+            // D. Chuẩn bị cho Backtracking (VĐV Tự do)
+            const availableSlots = allSlots.filter(s => !usedSlots.has(s));
+            
+            // Xáo trộn ngẫu nhiên danh sách Slot và danh sách VĐV
+            shuffleArray(availableSlots);
+            shuffleArray(freeVDVs); // Tên biến không thay đổi
+
+            // Hàm đệ quy (Backtracking)
+            function solve(vdvIndex) { // Tên biến không thay đổi
+                if (vdvIndex >= freeVDVs.length) return true;
+
+                const currentVDV = freeVDVs[vdvIndex]; // Tên biến không thay đổi
+
+                // Thử từng slot còn trống (đã xáo trộn)
+                for (let i = 0; i < availableSlots.length; i++) {
+                    const slot = availableSlots[i];
+                    if (slot === null) continue; // Slot đã bị chiếm trong nhánh đệ quy hiện tại
+
+                    const poolID = slotToPoolMap.get(slot);
+                    
+                    // KIỂM TRA RÀNG BUỘC: Đơn vị đã có trong nhánh chưa?
+                    if (!poolState[poolID].has(currentVDV.unit)) {
+                        
+                        // Thử gán
+                        currentVDV.drawNo = slot;
+                        currentVDV.poolID = poolID;
+                        poolState[poolID].add(currentVDV.unit);
+                        availableSlots[i] = null; // Đánh dấu đang dùng tạm
+                        
+                        // Đệ quy xếp người tiếp theo
+                        if (solve(vdvIndex + 1)) return true;
+
+                        // Backtrack (Quay lui): Hoàn tác
+                        poolState[poolID].delete(currentVDV.unit);
+                        availableSlots[i] = slot; // Trả lại slot
+                        delete currentVDV.drawNo;
+                        delete currentVDV.poolID;
+                    }
+                }
+                return false; 
+            }
+
+            // Chạy Backtracking
+            // Cập nhật thông báo: VĐV
+            if (solve(0)) {
+                // Thành công: Gộp danh sách và sort lại theo số thăm
+                const finalResult = [...fixedVDVs, ...freeVDVs].sort((a,b) => a.drawNo - b.drawNo);
+                return finalResult;
+            } else {
+                throw new Error("KHÔNG TÌM ĐƯỢC PHƯƠNG ÁN! Quá nhiều VĐV cùng đơn vị so với số lượng nhánh. Vui lòng chia thêm nhánh hoặc gỡ bỏ một số VĐV có cùng đơn vị.");
+            }
+        }
+        
+        /**
+         * Hàm reset toàn bộ cấu hình và dữ liệu nhập
+         */
+        function resetDraw() {
+            const drawButton = document.getElementById('draw-button');
+            drawButton.disabled = false;
+            drawButton.innerHTML = 'THỰC HIỆN BỐC THĂM NGẪU NHIÊN';
+
+            // 1. Reset Pool Definitions to default (A: 1-8)
+            const poolContainer = document.getElementById('pool-inputs');
+            poolContainer.innerHTML = `
+                <div class="grid grid-cols-3 gap-3">
+                    <input type="text" value="A" class="pool-id p-2 border rounded shadow-sm">
+                    <input type="number" value="1" class="pool-start p-2 border rounded shadow-sm">
+                    <input type="number" value="8" class="pool-end p-2 border rounded shadow-sm">
+                </div>
+            `;
+
+            // 2. Clear VDV data input and title
+            document.getElementById('vdv-data-input').value = '';
+            document.getElementById('draw-title').value = '';
+            document.getElementById('file-name-display').textContent = 'Chưa có file nào được chọn.';
+
+            // 3. Clear latest results and message box
+            document.getElementById('latest-results').innerHTML = '<p class="text-gray-500 italic p-2">Chưa có kết quả.</p>';
+            document.getElementById('export-buttons').classList.add('hidden');
+            document.getElementById('message-box').innerHTML = '';
+            
+            // 4. Update count
+            updateVDVCount();
+
+            // Optional feedback message
+            document.getElementById('message-box').innerHTML = createAlert('Đã làm mới hoàn toàn, sẵn sàng cho lần bốc thăm nội dung mới.', 'success');
+        }
+        window.resetDraw = resetDraw; 
+
+        // --- CÁC HÀM TIỆN ÍCH (HELPER) ---
+
+        /**
+         * Trích xuất dữ liệu VĐV từ textarea
+         */
+        function getVDVData() { // Tên hàm không thay đổi
+            const raw = document.getElementById('vdv-data-input').value.trim();
+            // Cập nhật thông báo: VĐV
+            if(!raw) throw new Error("Chưa nhập danh sách VĐV");
+            
+            let lines = raw.split('\n').filter(l => l.trim());
+            
+            // Kiểm tra và loại bỏ dòng tiêu đề
+            if (lines.length > 0) {
+                const firstLine = lines[0].trim().toLowerCase();
+                if (firstLine.includes('tên') && firstLine.includes('đơn vị')) {
+                    lines.shift(); 
+                }
+            }
+            
+            const data = [];
+            const fixedSet = new Set(); // Theo dõi số thăm cố định đã dùng
+
+            lines.forEach((line, originalIndex) => {
+                // Hỗ trợ dấu Tab, dấu Phẩy, hoặc nhiều khoảng trắng
+                let parts = line.includes('\t') ? line.split('\t') : (line.includes(',') ? line.split(',') : line.split(/\s{2,}/));
+                parts = parts.map(p => p.trim()).filter(p => p);
+                
+                // Cho phép 2 hoặc 3 cột. Cột 3 là Số thăm cố định (FixedNo)
+                // ĐÃ LOẠI BỎ ", [Số thăm cố định]" theo yêu cầu trước
+                if(parts.length < 2) throw new Error(`Dòng dữ liệu thứ ${originalIndex + 1} sai định dạng. Cần tối thiểu: Tên, Đơn vị`);
+                
+                let fixedNo = 0;
+                if(parts.length >= 3) {
+                    fixedNo = parseInt(parts[2]);
+                    if(fixedNo > 0) {
+                        if(fixedSet.has(fixedNo)) throw new Error(`Trùng số thăm cố định: ${fixedNo}. Số ${fixedNo} đã được sử dụng.`);
+                        fixedSet.add(fixedNo);
+                    }
+                }
+
+                data.push({
+                    id: originalIndex,
+                    name: parts[0],
+                    unit: parts[1],
+                    fixedNo: isNaN(fixedNo) ? 0 : fixedNo
+                });
+            });
+            return data;
+        }
+
+        /**
+         * Trích xuất cấu hình nhánh (Pools)
+         */
+        function getPoolDefinitions() {
+            const inputs = document.querySelectorAll('#pool-inputs > div');
+            const pools = [];
+            const idSet = new Set();
+            let lastEnd = 0;
+
+            inputs.forEach((div, index) => {
+                const inputs = div.querySelectorAll('input');
+                const id = inputs[0].value.trim();
+                const start = parseInt(inputs[1].value);
+                const end = parseInt(inputs[2].value);
+                
+                // Kiểm tra ràng buộc
+                if (!id) throw new Error(`Nhánh thứ ${index + 1} thiếu Tên/ID.`);
+                if (idSet.has(id)) throw new Error(`Tên/ID nhánh "${id}" bị trùng.`);
+                if(isNaN(start) || isNaN(end) || start <= 0 || end <= 0) {
+                     throw new Error(`Cấu hình Nhánh "${id}" sai! Vui lòng nhập số thăm hợp lệ (>0).`);
+                } 
+                if (start > end) {
+                    throw new Error(`Cấu hình Nhánh "${id}" sai! Số thăm Bắt đầu (${start}) phải nhỏ hơn hoặc bằng Số thăm Kết thúc (${end}).`);
+                }
+                
+                // Kiểm tra overlap
+                if (index > 0 && start <= lastEnd) {
+                     throw new Error(`Cấu hình Nhánh "${id}" bị chồng lấn! Số thăm bắt đầu (${start}) phải lớn hơn số thăm kết thúc của nhánh trước (${lastEnd}).`);
+                }
+                
+                pools.push({ id, start, end });
+                idSet.add(id);
+                lastEnd = end;
+            });
+
+            if(pools.length === 0) throw new Error("Chưa cấu hình Nhánh");
+            return pools;
+        }
+
+        /**
+         * Thêm trường nhập nhánh mới
+         */
+        function addPoolInput() {
+            const container = document.getElementById('pool-inputs');
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-3 gap-3 relative mt-2';
+            div.innerHTML = `
+                <input type="text" placeholder="Tên Nhánh" class="pool-id p-2 border rounded shadow-sm">
+                <input type="number" value="1" placeholder="Từ" class="pool-start p-2 border rounded shadow-sm">
+                <input type="number" value="1" placeholder="Đến" class="pool-end p-2 border rounded shadow-sm">
+                <button onclick="this.parentElement.remove(); updateVDVCount();" class="absolute -right-6 top-0 bottom-0 my-auto h-6 w-6 flex items-center justify-center text-red-500 hover:text-red-700 font-bold transition duration-150 rounded-full hover:bg-red-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            `;
+            container.appendChild(div);
+        }
+
+        /**
+         * Hàm xáo trộn mảng (Fisher-Yates)
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        /**
+         * Tạo hộp thông báo tùy chỉnh
+         */
+        function createAlert(msg, type) {
+            const color = type === 'error' ? 'red' : 'green';
+            return `<div class="p-3 mb-4 bg-${color}-100 text-${color}-700 border border-${color}-400 rounded-lg shadow-md">${msg}</div>`;
+        }
+        
+        /**
+         * Tải về file mẫu CSV cho danh sách VĐV
+         */
+        window.downloadSampleFile = () => {
+            const sampleData = [
+                "Tên VĐV,Đơn vị",
+                "Nguyễn Văn An,Hà Nội",
+                "Lê Thị Bình,HCM",
+                "Trần Văn Cường,Hải Phòng",
+            ];
+            
+            const csvContent = sampleData.join('\n');
+            
+            // Tạo Blob và link tải xuống, thêm BOM (\ufeff) để hiển thị tiếng Việt trong Excel
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            // Cập nhật tên file: VĐV
+            link.download = `Danh_Sach_VDV_Mau_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        // --- EXPORT FUNCTIONS ---
+        
+        /**
+         * Xuất kết quả ra file Excel (.csv)
+         */
+        window.exportToExcel = (data, title) => {
+            if(!data || !data.length) return document.getElementById('message-box').innerHTML = createAlert("Không có dữ liệu để xuất.", 'error');
+
+            // Cập nhật tiêu đề cột: VĐV
+            const csv = ["STT,Tên VĐV,Đơn vị,Số thăm,Nhánh"];
+            data.forEach((d, i) => csv.push(`${i+1},"${d.name}","${d.unit}",${d.drawNo},${d.poolID}`));
+            
+            // Thêm BOM để xử lý tiếng Việt
+            const blob = new Blob(['\ufeff' + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${title}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        /**
+         * Xuất kết quả ra file PDF
+         */
+        window.exportToPDF = (data, title) => {
+            if(!window.jsPDF) return document.getElementById('message-box').innerHTML = createAlert("Thư viện PDF chưa tải xong.", 'error');
+
+            const doc = new window.jsPDF();
+            doc.setFont("helvetica", "bold");
+            doc.text(title.toUpperCase(), 105, 20, { align: "center" });
+            
+            // Lưu ý: jsPDF mặc định không hỗ trợ tiếng Việt Unicode tốt nếu không nhúng font.
+            // Giải pháp tạm thời: sử dụng font mặc định, chấp nhận lỗi font cho tên VĐV.
+            
+            doc.autoTable({
+                // Cập nhật tiêu đề cột: VĐV
+                head: [["STT", "Ten VĐV", "Don Vi", "So Tham", "Nhanh"]],
+                body: data.map((d, i) => [i+1, d.name, d.unit, d.drawNo, d.poolID]),
+                startY: 30,
+                // Hook để thêm footer/bản quyền cho mỗi trang
+                didDrawPage: function (hookData) {
+                    // Đóng dấu bản quyền ở cuối mỗi trang
+                    doc.setFontSize(8);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(COPYRIGHT_TEXT, 105, doc.internal.pageSize.height - 10, { align: "center" });
+                }
+            });
+            doc.save(`${title}.pdf`);
+        };
+    </script>
+</body>
+</html>
